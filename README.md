@@ -11,6 +11,8 @@ An experimental Remote Framebuffer (RFB) Protocol server implementation in C# ta
 
 > ⚠️ **Experimental Project**: This is a work-in-progress implementation of the RFB protocol. Several critical encodings and features are still under development. Contributions are welcome!
 
+> 🤖 **AI-Assisted Development**: This project was developed with the assistance of **GitHub Copilot**, **Anthropic Claude 3.5**, and **Visual Studio 2026**, demonstrating the potential of AI-powered development tools in creating complex protocol implementations.
+
 ## Overview
 
 RfbTest is an experimental VNC (Virtual Network Computing) server/client implementation that explores various framebuffer encoding techniques for efficient remote desktop streaming. The project leverages DirectX for screen capture and implements multiple RFB protocol encodings.
