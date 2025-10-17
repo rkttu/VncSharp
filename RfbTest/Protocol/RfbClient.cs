@@ -39,13 +39,21 @@ public class RfbClient : IDisposable
     public bool SupportsCopyRect => _supportedEncodings.Contains(RfbProtocol.EncodingType.CopyRect);
     
     /// <summary>
+    /// 클라이언트가 RRE 인코딩을 지원하는지 확인
+    /// </summary>
+    public bool SupportsRRE => _supportedEncodings.Contains(RfbProtocol.EncodingType.RRE);
+    
+    /// <summary>
     /// 클라이언트가 선호하는 인코딩 가져오기
     /// </summary>
     public RfbProtocol.EncodingType GetPreferredEncoding()
     {
-        // 우선순위: Hextile > Raw
+        // 우선순위: Hextile > RRE > Raw
         if (_supportedEncodings.Contains(RfbProtocol.EncodingType.Hextile))
             return RfbProtocol.EncodingType.Hextile;
+        
+        if (_supportedEncodings.Contains(RfbProtocol.EncodingType.RRE))
+            return RfbProtocol.EncodingType.RRE;
         
         return RfbProtocol.EncodingType.Raw;
     }
@@ -659,6 +667,20 @@ public class RfbClient : IDisposable
                         encodedData = HextileEncoder.EncodeRegion(frameBuffer, width, height, 0, 0, width, height);
                     }
                     RfbLogger.Log($"[Encoding] Hextile: {encodedData.Length} bytes for {width}x{height} region (compression: {(float)encodedData.Length / (width * height * 4):P1})");
+                }
+                else if (selectedEncoding == RfbProtocol.EncodingType.RRE)
+                {
+                    // RRE 인코딩
+                    if (isFullBuffer)
+                    {
+                        encodedData = RreEncoder.EncodeRegion(frameBuffer, FramebufferWidth, FramebufferHeight, x, y, width, height);
+                    }
+                    else
+                    {
+                        // 이미 영역만 추출된 버퍼 - 임시 버퍼 생성
+                        encodedData = RreEncoder.EncodeRegion(frameBuffer, width, height, 0, 0, width, height);
+                    }
+                    RfbLogger.Log($"[Encoding] RRE: {encodedData.Length} bytes for {width}x{height} region (compression: {(float)encodedData.Length / (width * height * 4):P1})");
                 }
                 else
                 {
