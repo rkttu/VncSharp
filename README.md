@@ -4,7 +4,7 @@
 
 ![UltraVNC](images/ultravnc.png)
 
-An experimental Remote Framebuffer (RFB) Protocol server implementation in C# targeting .NET 8, exploring efficient screen sharing and remote desktop functionality.
+An experimental Remote Framebuffer (RFB) Protocol server implementation in C# targeting .NET 10, exploring efficient screen sharing and remote desktop functionality.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
@@ -64,7 +64,7 @@ We're actively seeking contributions for the following high-priority features:
 
 ## Technology Stack
 
-- **.NET 8.0** (Windows)
+- **.NET 10.0** (Windows)
 - **SharpDX**: DirectX 11 screen capture
 - **System.Drawing.Common**: Image processing
 
@@ -72,9 +72,9 @@ We're actively seeking contributions for the following high-priority features:
 
 ### Prerequisites
 
-- .NET 8.0 SDK or later
+- .NET 10.0 SDK or later
 - Windows OS (for DirectX screen capture)
-- Visual Studio 2022 or later (recommended)
+- Visual Studio 2026 or later (recommended)
 
 ### Building the Project
 
