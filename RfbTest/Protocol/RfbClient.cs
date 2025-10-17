@@ -34,6 +34,11 @@ public class RfbClient : IDisposable
     public bool SupportsHextile => _supportedEncodings.Contains(RfbProtocol.EncodingType.Hextile);
     
     /// <summary>
+    /// 클라이언트가 CopyRect 인코딩을 지원하는지 확인
+    /// </summary>
+    public bool SupportsCopyRect => _supportedEncodings.Contains(RfbProtocol.EncodingType.CopyRect);
+    
+    /// <summary>
     /// 클라이언트가 선호하는 인코딩 가져오기
     /// </summary>
     public RfbProtocol.EncodingType GetPreferredEncoding()
@@ -788,6 +793,68 @@ public class RfbClient : IDisposable
         catch (Exception ex)
         {
             RfbLogger.LogError("Error sending ExtendedDesktopSize", ex);
+        }
+    }
+
+    /// <summary>
+    /// CopyRect 인코딩으로 프레임버퍼 업데이트 전송
+    /// 화면의 한 영역을 다른 위치로 복사할 때 사용 (좌표만 전송하므로 매우 효율적)
+    /// </summary>
+    /// <param name="destX">대상 영역 X 좌표</param>
+    /// <param name="destY">대상 영역 Y 좌표</param>
+    /// <param name="width">영역 너비</param>
+    /// <param name="height">영역 높이</param>
+    /// <param name="srcX">원본 영역 X 좌표</param>
+    /// <param name="srcY">원본 영역 Y 좌표</param>
+    public async Task SendCopyRectUpdateAsync(ushort destX, ushort destY, ushort width, ushort height, 
+        ushort srcX, ushort srcY)
+    {
+        if (!IsConnected || !SupportsCopyRect) return;
+
+        try
+        {
+            RfbLogger.Log($"╔══════════════════════════════════════════════════════════");
+            RfbLogger.Log($"║ COPYRECT UPDATE");
+            RfbLogger.Log($"╠══════════════════════════════════════════════════════════");
+            RfbLogger.Log($"║ Dest Region: ({destX},{destY}) {width}x{height}");
+            RfbLogger.Log($"║ Source: ({srcX},{srcY})");
+            RfbLogger.Log($"║ Savings: {width * height * 4} bytes (only 4 bytes sent)");
+            RfbLogger.Log($"╚══════════════════════════════════════════════════════════");
+
+            lock (_sendLock)
+            {
+                using var ms = new MemoryStream();
+                using var writer = new BinaryWriter(ms);
+
+                // FramebufferUpdate 메시지 헤더
+                writer.Write((byte)RfbProtocol.ServerMessageType.FramebufferUpdate);
+                writer.Write((byte)0); // padding
+                writer.Write(SwapBytes((ushort)1)); // number-of-rectangles
+
+                // Rectangle 헤더
+                writer.Write(SwapBytes(destX));
+                writer.Write(SwapBytes(destY));
+                writer.Write(SwapBytes(width));
+                writer.Write(SwapBytes(height));
+                writer.Write(SwapBytes((int)RfbProtocol.EncodingType.CopyRect));
+
+                // CopyRect 데이터 (원본 좌표만)
+                var copyRectData = CopyRectEncoder.Encode(srcX, srcY);
+                writer.Write(copyRectData);
+
+                var data = ms.ToArray();
+                
+                RfbLogger.Log($"[Send] Total CopyRect message size: {data.Length} bytes (header: 12, data: 4)");
+                
+                _stream.Write(data, 0, data.Length);
+                _stream.Flush();
+                
+                RfbLogger.Log($"[Send] ✓ CopyRect update sent and flushed");
+            }
+        }
+        catch (Exception ex)
+        {
+            RfbLogger.LogError("Error sending CopyRect update", ex);
         }
     }
     
