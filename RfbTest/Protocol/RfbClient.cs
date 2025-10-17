@@ -854,14 +854,35 @@ public class RfbClient : IDisposable
     {
         var buffer = new byte[7]; // down-flag(1) + padding(2) + key(4)
         await _stream.ReadAsync(buffer, 0, 7);
-        // 키 이벤트 처리는 실제 구현에서 처리
+        
+        var downFlag = buffer[0] != 0;
+        
+        // 키 코드 읽기 (big-endian 4 bytes)
+        var keyBytes = new byte[4];
+        Array.Copy(buffer, 3, keyBytes, 0, 4);
+        if (BitConverter.IsLittleEndian)
+            Array.Reverse(keyBytes);
+        var key = BitConverter.ToUInt32(keyBytes, 0);
+        
+        RfbLogger.Log($"[Client] KeyEvent: {(downFlag ? "DOWN" : "UP")}, Key: 0x{key:X8}");
+        
+        // 이벤트 발생
+        OnKeyEvent?.Invoke(downFlag, key);
     }
 
     private async Task HandlePointerEventAsync()
     {
         var buffer = new byte[5]; // button-mask(1) + x(2) + y(2)
         await _stream.ReadAsync(buffer, 0, 5);
-        // 포인터 이벤트 처리는 실제 구현에서 처리
+        
+        var buttonMask = buffer[0];
+        var x = (ushort)((buffer[1] << 8) | buffer[2]);
+        var y = (ushort)((buffer[3] << 8) | buffer[4]);
+        
+        RfbLogger.Log($"[Client] PointerEvent: ({x}, {y}), Buttons: 0x{buttonMask:X2}");
+        
+        // 이벤트 발생
+        OnPointerEvent?.Invoke(buttonMask, x, y);
     }
 
     /// <summary>
@@ -895,6 +916,16 @@ public class RfbClient : IDisposable
             RfbLogger.LogError("[SetDesktopSize] Error handling SetDesktopSize", ex);
         }
     }
+
+    /// <summary>
+    /// 키보드 이벤트 발생 시 호출되는 이벤트
+    /// </summary>
+    public event Action<bool, uint>? OnKeyEvent;
+
+    /// <summary>
+    /// 마우스/포인터 이벤트 발생 시 호출되는 이벤트
+    /// </summary>
+    public event Action<byte, ushort, ushort>? OnPointerEvent;
 
     /// <summary>
     /// 데스크톱 크기 변경 요청 이벤트

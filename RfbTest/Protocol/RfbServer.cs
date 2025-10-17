@@ -1,3 +1,4 @@
+using RfbTest.Contracts;
 using RfbTest.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -20,6 +21,7 @@ public class RfbServer : IDisposable
     private string? _password; // VNC 비밀번호
     private readonly object _passwordLock = new object(); // 비밀번호 변경 시 동기화
     private readonly Dictionary<RfbClient, FrameBufferDiff> _clientDiffs; // 클라이언트별 변경 감지
+    private IInputHandler? _inputHandler; // 입력 처리 핸들러
 
     public IPAddress Address { get; }
     public int Port { get; }
@@ -89,6 +91,15 @@ public class RfbServer : IDisposable
         
         // 초기 프레임버퍼 생성 (검은 화면)
         _currentFrameBuffer = new byte[width * height * 4];
+    }
+
+    /// <summary>
+    /// 입력 처리 핸들러 설정
+    /// </summary>
+    public void SetInputHandler(IInputHandler? inputHandler)
+    {
+        _inputHandler = inputHandler;
+        RfbLogger.Log($"[Server] Input handler {(inputHandler != null ? "enabled" : "disabled")}");
     }
 
     /// <summary>
@@ -283,6 +294,24 @@ public class RfbServer : IDisposable
                 
                 // 서버 이벤트 발생 (UI에서 처리)
                 FramebufferSizeChangeRequested?.Invoke(width, height);
+            };
+
+            // 키보드 입력 이벤트 연결
+            client.OnKeyEvent += (downFlag, key) =>
+            {
+                if (_inputHandler != null)
+                {
+                    _inputHandler.HandleKeyEvent(downFlag, key);
+                }
+            };
+
+            // 마우스 입력 이벤트 연결
+            client.OnPointerEvent += (buttonMask, x, y) =>
+            {
+                if (_inputHandler != null)
+                {
+                    _inputHandler.HandlePointerEvent(buttonMask, x, y);
+                }
             };
             
             // 핸드셰이크 수행

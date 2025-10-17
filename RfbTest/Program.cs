@@ -1,6 +1,8 @@
 using RfbTest.Contracts;
+using RfbTest.InputHandlers;
 using RfbTest.Protocol;
 using RfbTest.ScreenCaptures;
+using System.Runtime.InteropServices;
 
 Console.WriteLine("==============================================");
 Console.WriteLine("RFB Server - Console Mode (No UI Display)");
@@ -44,8 +46,13 @@ if (usePassword)
 }
 
 Console.WriteLine();
+Console.Write("원격 입력 제어를 활성화하시겠습니까? (Y/N): ");
+var enableInput = Console.ReadLine()?.Trim().ToUpper() == "Y";
+
+Console.WriteLine();
 Console.WriteLine($"포트: {port}");
 Console.WriteLine($"인증: {(string.IsNullOrEmpty(password) ? "없음" : "VNC Authentication")}");
+Console.WriteLine($"입력 제어: {(enableInput ? "활성화" : "비활성화")}");
 Console.WriteLine();
 
 // 화면 캡처 초기화
@@ -90,6 +97,19 @@ var server = new RfbServer(
     password: password
 );
 
+// 입력 핸들러 설정 (Windows 플랫폼)
+if (enableInput && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    Console.WriteLine("[Init] 입력 핸들러 초기화 중...");
+    var inputHandler = new WindowsInputHandler();
+    server.SetInputHandler(inputHandler);
+    Console.WriteLine("[Init] ✓ 입력 핸들러 활성화됨 (키보드 + 마우스)");
+}
+else if (enableInput)
+{
+    Console.WriteLine("[Init] ⚠ 입력 제어는 Windows에서만 지원됩니다.");
+}
+
 // 프레임버퍼 요청 이벤트
 int eventCallCount = 0;
 server.FrameBufferRequested += () =>
@@ -133,6 +153,10 @@ Console.WriteLine();
 Console.WriteLine("✓ 서버가 시작되었습니다.");
 Console.WriteLine($"  연결 주소: localhost:{port}");
 Console.WriteLine($"  화면 크기: {width}x{height}");
+if (enableInput && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    Console.WriteLine($"  입력 제어: 활성화 (키보드 + 마우스)");
+}
 Console.WriteLine();
 
 // 화면 캡처 루프 시작
